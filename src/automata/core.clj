@@ -1,4 +1,5 @@
-(ns automata.core)
+(ns automata.core
+  (:use [clojure.pprint]))
 
 (def foo [[1 2 \a]
           [2 1 \b]])
@@ -36,14 +37,16 @@
 
 foo
 
-(defn run-dfa [rules state input]
+(defn run-dfa [rules state input & last_log]
   (if (not= (count input) 0)
-    (let [goto (next-state rules state (first input))]
+    (let [goto (next-state rules state (first input))
+          log (cons [(first input) goto] (or last_log (list [:start state])))]
       (if-not (nil? goto)
-        (recur rules goto (rest input))))
-    (accepting-by-id rules state)))
+        (recur rules goto (rest input) log)))
+    (list (accepting-by-id rules state) (reverse last_log))))
 
-(run-dfa foo 1 "abab")
+(defn main []
+  (pprint (run-dfa foo 1 "ababababababababababababababababababa")))
 
 (first "abab")
 (rest "abab")
