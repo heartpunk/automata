@@ -1,38 +1,35 @@
 (ns automata.core
   (:use [clojure.pprint]))
 
-(def foo [[:start 1 :free]
-          [1 2 \a]
-          [2 1 \b]])
+(def foo [[:start 1 :free false]
+          [1 2 \a false]
+          [2 1 \b true]])
 
-(def acceptingness {1 false
-                    2 true})
+(def single-foo
+         [[:start 1 :free false]
+          [1 2 \a false]
+          [2 :end \b true]])
 
-(defn id [rule]
-  (nth rule 0))
+(defn id [rule] (rule 0))
 
-(defn next-id [rule]
-  (nth rule 1))
+(defn next-id [rule] (rule 1))
 
-(defn expected-char [rule]
-  (nth rule 2))
+(defn expected-char [rule] (rule 2))
 
-(defn accepting [rule]
-  (nth rule 3))
+(defn accepting [rule] (rule 3))
 
-(accepting [1 2 \a false])
+(defn start [rule] (= (id rule) :start))
+
+(defn rule-by-id [rules id-number]
+  (first (filter (fn [rule] (= (first rule) id-number))
+                  rules)))
 
 (defn accepting-by-id [rules id-number]
-  (acceptingness id-number))
+  (accepting (rule-by-id rules id-number)))
 
 (defn free-by-id [rules id-number]
   (= :free
-     (nth
-       (first (filter
-                  (fn [rule] (= (first rule) id-number))
-                  rules
-                  ))
-     2)))
+     (nth (rule-by-id rules id-number) 2)))
 
 (accepting-by-id foo 1)
 
@@ -59,8 +56,18 @@ foo
           (recur rules remaining-input [goto log])))
     (list (accepting-by-id rules state) (reverse last_log))))
 
+(defn repeat-dfa [dfa]
+  (defn munge-rule [[id next-id expected-char accepting]]
+    [id :start :free accepting])
+  (let [final-state-rules (map munge-rule (filter accepting dfa))]
+    (reduce conj dfa final-state-rules)))
+
 (defn main []
-  (pprint (run-dfa foo "ababababababababababababababababababa")))
+  (pprint foo)
+  (pprint (run-dfa foo "ababababababababababababababababababa"))
+  (pprint (repeat-dfa single-foo))
+  (pprint (run-dfa (repeat-dfa single-foo) "ababababababababababababababababababa"))
+  )
 
 (first "abab")
 (rest "abab")
