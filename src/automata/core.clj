@@ -27,31 +27,43 @@
 (defn accepting-by-id [rules id-number]
   (accepting (rule-by-id rules id-number)))
 
+(defn free [rule]
+  (= :free (expected-char rule)))
+
 (defn free-by-id [rules id-number]
-  (= :free
-     (nth (rule-by-id rules id-number) 2)))
+  (free (rule-by-id rules id-number)))
 
 (accepting-by-id foo 1)
 
-(defn next-state [rules state input]
-  (defn check-rule [rule]
-            (and (= (id rule) state)
-                 (or
-                    (= (expected-char rule) :free)
-                    (= (expected-char rule) input)
-                  )))
-  (nth (first (filter check-rule rules)) 1))
+(defn check-rule [rule state next-char]
+  (and (= (id rule) state)
+       (or
+          (free rule)
+          (= (expected-char rule) next-char)
+        )))
 
-(next-state foo 1 \a)
-(next-state foo 2 \b)
+(defn matched-rules [rules state input]
+  (filter #(check-rule % state (first input)) rules))
 
-foo
+(defn next-states-and-inputs [rules state input]
+  (let [next-states (matched-rules rules state input)]
+    (map (fn [nxt]
+            [(next-id nxt) (if (free-by-id rules state) input (rest input))])
+          next-states)))
+
+(defn next-states [rules state input]
+  (map #(% 0) (next-states-and-inputs rules state input)))
+
+(defn next-inputs [rules state input]
+  (map #(% 1) (next-states-and-inputs rules state input)))
 
 (defn run-dfa [rules input & [state last_log]]
   (if (not= (count input) 0)
-    (let [goto (next-state rules (or state :start) (first input))
+    (let [states-and-inputs (next-states-and-inputs rules (or state :start) input)
+          state-and-input (first states-and-inputs)
+          goto (state-and-input 0)
           log (cons [(first input) goto] (or last_log (list [:start state])))
-          remaining-input (if (free-by-id rules (or state :start)) input (rest input))]
+          remaining-input (state-and-input 1)]
       (if-not (nil? goto)
           (recur rules remaining-input [goto log])))
     (list (accepting-by-id rules state) (reverse last_log))))
@@ -63,10 +75,10 @@ foo
     (reduce conj dfa final-state-rules)))
 
 (defn main []
-  (pprint foo)
+  ; (pprint foo)
   (pprint (run-dfa foo "ababababababababababababababababababa"))
-  (pprint (repeat-dfa single-foo))
-  (pprint (run-dfa (repeat-dfa single-foo) "ababababababababababababababababababa"))
+  ; (pprint (repeat-dfa single-foo))
+  ; (pprint (run-dfa (repeat-dfa single-foo) "ababababababababababababababababababa"))
   )
 
 (first "abab")
