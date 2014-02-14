@@ -68,17 +68,28 @@
           (recur rules remaining-input [goto log])))
     (list (accepting-by-id rules state) (reverse last_log))))
 
-(defn repeat-dfa [dfa]
+(defn repeat-dfa [dfa] ; this actually makes nfas?
   (defn munge-rule [[id next-id expected-char accepting]]
     [id :start :free accepting])
   (let [final-state-rules (map munge-rule (filter accepting dfa))]
     (reduce conj dfa final-state-rules)))
 
+(defn run-nfa [nfa states-and-inputs]
+  (let [new-states-and-inputs (mapcat (fn [[state input]] (next-states-and-inputs nfa state input)) states-and-inputs)]
+    (if (some (fn [[state input]]
+                (and
+                  (not (= state :end)); this is a hack, and should be changed on my next run through this.
+                  (accepting-by-id nfa state)
+                  (= 0 (count input))))
+              new-states-and-inputs)
+      true
+      (recur nfa new-states-and-inputs))))
+
 (defn main []
   ; (pprint foo)
   (pprint (run-dfa foo "ababababababababababababababababababa"))
-  ; (pprint (repeat-dfa single-foo))
-  ; (pprint (run-dfa (repeat-dfa single-foo) "ababababababababababababababababababa"))
+  (pprint (repeat-dfa single-foo))
+  (pprint (run-nfa (repeat-dfa single-foo) [(list :start "ababababababababababababababababababa")]))
   )
 
 (first "abab")
