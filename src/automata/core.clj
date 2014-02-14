@@ -45,10 +45,14 @@
 (defn matched-rules [rules state input]
   (filter #(check-rule % state (first input)) rules))
 
-(defn next-states-and-inputs [rules state input]
+(defn next-states-and-inputs [rules state input & [last-log]]
   (let [next-states (matched-rules rules state input)]
     (map (fn [nxt]
-            [(next-id nxt) (if (free-by-id rules state) input (rest input))])
+            (let [log (cons [(first input) (next-id nxt)] (or last-log (list [:start nil])))
+                  retval [(next-id nxt) (if (free-by-id rules state) input (rest input)) log]]
+              #_(pprint last-log)
+              #_(print "\n")
+              retval))
           next-states)))
 
 (defn next-states [rules state input]
@@ -75,20 +79,27 @@
     (reduce conj dfa final-state-rules)))
 
 (defn run-nfa [nfa states-and-inputs]
-  (let [new-states-and-inputs (mapcat (fn [[state input]] (next-states-and-inputs nfa state input)) states-and-inputs)]
+  (defn reverse-log [[state input log]]
+      [state input (reverse log)])
+  (let [new-states-and-inputs (mapcat (fn [[& args]] #_(pprint (cons nfa args)) (apply next-states-and-inputs (cons nfa args))) states-and-inputs)
+        final-output (map #(% 2) (map reverse-log new-states-and-inputs))]
+    #_(pprint new-states-and-inputs)
     (if (some (fn [[state input]]
                 (and
                   (not (= state :end)); this is a hack, and should be changed on my next run through this.
                   (accepting-by-id nfa state)
                   (= 0 (count input))))
               new-states-and-inputs)
-      true
-      (recur nfa new-states-and-inputs))))
+      (list true final-output)
+      (if (some #(not= 0 (count (% 1))) new-states-and-inputs)
+        (recur nfa new-states-and-inputs)
+        (list false final-output)))))
 
 (defn main []
   ; (pprint foo)
-  (pprint (run-dfa foo "ababababababababababababababababababa"))
-  (pprint (repeat-dfa single-foo))
+  ; (pprint (run-dfa foo "ababababababababababababababababababa"))
+  ; (identity (repeat-dfa single-foo))
+  ; (pprint (cons (repeat-dfa single-foo) (list :start "ababababababababababababababababababa")))
   (pprint (run-nfa (repeat-dfa single-foo) [(list :start "ababababababababababababababababababa")]))
   )
 
