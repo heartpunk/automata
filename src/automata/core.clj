@@ -61,6 +61,7 @@
 (defn next-inputs [rules state input]
   (map #(% 1) (next-states-and-inputs rules state input)))
 
+; this should be a wrapper around run-nfa
 (defn run-dfa [rules input & [state last_log]]
   (if (not= (count input) 0)
     (let [states-and-inputs (next-states-and-inputs rules (or state :start) input)
@@ -78,6 +79,7 @@
   (let [final-state-rules (map munge-rule (filter accepting dfa))]
     (reduce conj dfa final-state-rules)))
 
+; this will actually run DFAs just fine, but is built to support NFAs.
 (defn run-nfa [nfa states-and-inputs]
   (defn reverse-log [[state input log]]
       [state input (reverse log)])
@@ -95,12 +97,28 @@
         (recur nfa new-states-and-inputs)
         (list false final-output)))))
 
+; need to add a test for the case where there are repeated rules.
+(defn is-nfa? [automata]
+  (defn id-and-expected-char [rule]
+    [(id rule) (expected-char rule)])
+  (let [ids (map id (set automata))]
+    (not=
+      ids
+      (distinct ids))))
+
+(defn is-dfa? [automata]
+  (not (is-nfa? automata)))
+
 (defn main []
   ; (pprint foo)
   ; (pprint (run-dfa foo "ababababababababababababababababababa"))
   ; (identity (repeat-dfa single-foo))
   ; (pprint (cons (repeat-dfa single-foo) (list :start "ababababababababababababababababababa")))
   (pprint (run-nfa (repeat-dfa single-foo) [(list :start "ababababababababababababababababababa")]))
+  (pprint (is-nfa? single-foo))
+  (pprint (is-nfa? (repeat-dfa single-foo)))
+  (pprint (is-dfa? single-foo))
+  (pprint (is-dfa? (repeat-dfa single-foo)))
   )
 
 (first "abab")
