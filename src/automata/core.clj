@@ -97,17 +97,30 @@
         (recur nfa new-states-and-inputs)
         (list false final-output)))))
 
-; need to add a test for the case where there are repeated rules.
-(defn is-nfa? [automata]
+; this is closer to where we need to end up, but it's not right.
+; the problem is that duplicate paths are only really duplicate if
+; there's a character consuming rule and a free rule from the same
+; source to the same target. counting that is beyond me now. D=
+(defn rule-counts [automata]
   (defn id-and-expected-char [rule]
     [(id rule) (expected-char rule)])
-  (let [ids (map id (set automata))]
-    (not=
-      ids
-      (distinct ids))))
+  (defn rule-freq []
+    (let [ids (distinct (map id automata))
+          rules-by-ids (group-by #(identity [(id %) (next-id %)]) automata)
+          foo (map #(identity [(key %) (val %)]) rules-by-ids)]
+      rules-by-ids))
+  (let [ids-and-expected-chars (map id-and-expected-char automata)]
+    (vals (rule-freq))))
 
+; need to add a test for the case where there are repeated rules.
 (defn is-dfa? [automata]
-  (not (is-nfa? automata)))
+  (every? #(= % 1) (rule-counts automata)))
+
+(rule-counts (repeat-dfa single-foo))
+(is-dfa? (repeat-dfa single-foo))
+
+(defn is-nfa? [automata]
+  (some #(not= % 1) (rule-counts automata)))
 
 (defn main []
   ; (pprint foo)
